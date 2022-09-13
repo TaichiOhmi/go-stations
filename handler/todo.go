@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
-
+	"net/http"
+	"encoding/json"
+	"log"
 	"github.com/TechBowl-japan/go-stations/model"
 	"github.com/TechBowl-japan/go-stations/service"
 )
@@ -17,6 +19,44 @@ func NewTODOHandler(svc *service.TODOService) *TODOHandler {
 	return &TODOHandler{
 		svc: svc,
 	}
+}
+
+func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		
+		request := &model.CreateTODORequest{}
+		// log.Print("request: ",request)
+		if err := json.NewDecoder(r.Body).Decode(request); err != nil {
+			log.Println(err)
+			return
+		}
+		// log.Print("decoded request: ",request)
+		if request.Subject == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return 
+		}	
+		todos, err := h.svc.CreateTODO(r.Context(), request.Subject, request.Description)
+		// log.Printf("%T\n", todos)
+		// log.Println("res",todos)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		response := model.CreateTODOResponse{TODO:*todos}
+
+		// log.Println(response)
+		// log.Printf("%v, %T\n", response.TODO.ID,response.TODO.ID)
+
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Println(err)
+			return
+		}
+
+		// log.Printf("%v, %T\n", response.TODO.ID,response.TODO.ID)
+		// log.Println(response)
+	}
+	
 }
 
 // Create handles the endpoint that creates the TODO.
